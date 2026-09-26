@@ -40,6 +40,11 @@ const mainConfig: Configuration = {
   ...commonConfig,
   target: "electron-main",
   entry: path.resolve(desktopDirectory, "src/main/index.ts"),
+  // Prisma locates its native query engine relative to its own package,
+  // so it must be loaded from node_modules at runtime, not bundled.
+  externals: {
+    "@prisma/client": "commonjs @prisma/client",
+  },
   output: {
     ...commonConfig.output,
     filename: "main.bundle.js",

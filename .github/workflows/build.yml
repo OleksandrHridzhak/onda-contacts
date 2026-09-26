@@ -63,6 +63,12 @@ jobs:
         env:
           NODE_ENV: production
           CSC_IDENTITY_AUTO_DISCOVERY: false
+      - name: Check the Prisma query engine is packaged
+        shell: bash
+        run: ls dist/*-unpacked/resources/app/node_modules/.prisma/client/*query_engine*
+      - name: Smoke test packaged app
+        if: runner.os == 'Linux'
+        run: xvfb-run -a node scripts/smoke-test.cjs dist/linux-unpacked/onda-contacts
       - uses: actions/upload-artifact@v4
         with:
           name: onda-contacts-${{ runner.os }}
