@@ -3,12 +3,12 @@
  * from the repo's node_modules can leak in) and exercises the database
  * through the real IPC bridge.
  *
- *   node scripts/smoke-test.cjs dist/linux-unpacked/onda-contacts
+ *   node scripts/smoke-test.mjs dist/linux-unpacked/onda-contacts
  */
-const fs = require("node:fs");
-const os = require("node:os");
-const path = require("node:path");
-const { _electron } = require("playwright");
+import fs from "node:fs";
+import os from "node:os";
+import path from "node:path";
+import { _electron } from "playwright";
 
 async function main() {
   const executablePath = path.resolve(process.argv[2]);
