@@ -1,0 +1,5 @@
+/* Centralized styles are organized in dedicated files:
+   - themes.css: Theme palettes and color variables
+   - scrollbar.css: Theme-aware scrollbars and overflow utilities
+*/
+@import "./scrollbar.css";

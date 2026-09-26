@@ -1,0 +1,59 @@
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+model Setting {
+  id          String @id @default("global")
+  preferences String @default("{}")
+}
+
+model Contact {
+  id              String        @id
+  firstName       String        @default("")
+  lastName        String        @default("")
+  headline        String        @default("")
+  company         String        @default("")
+  position        String        @default("")
+  location        String        @default("")
+  emails          String        @default("[]")
+  phones          String        @default("[]")
+  socials         String        @default("{}")
+  tagIds          String        @default("[]")
+  sources         String        @default("[]")
+  notes           String        @default("")
+  howWeMet        String        @default("")
+  birthday        String?
+  avatarColor     String        @default("accent2")
+  isFavorite      Boolean       @default(false)
+  keepInTouchDays Int?
+  lastContactedAt DateTime?
+  connectedAt     DateTime?
+  createdAt       DateTime      @default(now())
+  updatedAt       DateTime      @updatedAt
+  interactions    Interaction[]
+
+  @@index([lastName, firstName])
+}
+
+model Interaction {
+  id        String   @id
+  contactId String
+  contact   Contact  @relation(fields: [contactId], references: [id], onDelete: Cascade)
+  type      String   @default("note")
+  text      String   @default("")
+  date      DateTime
+  createdAt DateTime @default(now())
+
+  @@index([contactId, date])
+}
+
+model Tag {
+  id    String @id
+  name  String
+  color String @default("accent2")
+}

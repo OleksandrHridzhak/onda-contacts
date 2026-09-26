@@ -1,0 +1,102 @@
+name: Build & Release
+
+# Every push to main publishes a downloadable "latest" build on the
+# Releases page. Tags like v3.1.0 publish a versioned release.
+# Pull requests are built too — the installers are attached to the run.
+
+on:
+  push:
+    branches: [main]
+    tags: ["v*"]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: build-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+      - run: npm ci --ignore-scripts
+      - run: npx prisma generate --schema=apps/desktop/prisma/schema.prisma
+      - run: npm test
+      - run: npm run lint
+      - run: npm run typecheck:electron
+
+  build:
+    needs: test
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: windows-latest
+            target: --win
+          - os: ubuntu-latest
+            target: --linux
+    runs-on: ${{ matrix.os }}
+    env:
+      NODE_ENV: production
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+      - run: npm ci --ignore-scripts
+      - run: npx prisma generate --schema=apps/desktop/prisma/schema.prisma
+      - run: npm run build
+      - name: Package
+        working-directory: apps/desktop
+        run: npx electron-builder ${{ matrix.target }} --publish never
+        env:
+          CSC_IDENTITY_AUTO_DISCOVERY: false
+      - uses: actions/upload-artifact@v4
+        with:
+          name: onda-contacts-${{ runner.os }}
+          path: |
+            dist/*.exe
+            dist/*.AppImage
+          if-no-files-found: error
+
+  release:
+    needs: build
+    if: github.event_name == 'push'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          path: artifacts
+          merge-multiple: true
+      - name: Publish release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+        run: |
+          ls -la artifacts
+          cat > notes.md <<NOTES
+          Automatic build of \`${GITHUB_SHA::7}\`.
+
+          - **Windows:** \`Onda-Contacts-Setup-*.exe\` (installer) or \`Onda-Contacts-Portable-*.exe\` (runs without installing)
+          - **Linux:** \`*.AppImage\` — \`chmod +x\` it and run
+
+          Builds are not code-signed, so Windows SmartScreen may warn: click **More info → Run anyway**.
+          NOTES
+          if [[ "$GITHUB_REF" == refs/tags/* ]]; then
+            gh release create "$GITHUB_REF_NAME" artifacts/* \
+              --title "Onda Contacts $GITHUB_REF_NAME" --notes-file notes.md
+          else
+            gh release delete latest --yes --cleanup-tag || true
+            gh release create latest artifacts/* \
+              --target "$GITHUB_SHA" --prerelease \
+              --title "Onda Contacts — latest build" --notes-file notes.md
+          fi
