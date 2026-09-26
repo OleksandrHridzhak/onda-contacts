@@ -25,7 +25,7 @@ jobs:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with:
-          node-version: 20
+          node-version: 22
           cache: npm
       - run: npm ci --ignore-scripts
       - run: npx prisma generate --schema=apps/desktop/prisma/schema.prisma
@@ -44,21 +44,24 @@ jobs:
           - os: ubuntu-latest
             target: --linux
     runs-on: ${{ matrix.os }}
-    env:
-      NODE_ENV: production
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with:
-          node-version: 20
+          node-version: 22
           cache: npm
       - run: npm ci --ignore-scripts
       - run: npx prisma generate --schema=apps/desktop/prisma/schema.prisma
+      # Only for bundling: NODE_ENV=production during `npm ci` would skip
+      # devDependencies (webpack, vite, electron-builder).
       - run: npm run build
+        env:
+          NODE_ENV: production
       - name: Package
         working-directory: apps/desktop
         run: npx electron-builder ${{ matrix.target }} --publish never
         env:
+          NODE_ENV: production
           CSC_IDENTITY_AUTO_DISCOVERY: false
       - uses: actions/upload-artifact@v4
         with:
